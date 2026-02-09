@@ -1,0 +1,281 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage{graphicx,textcomp}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{fullpage}
+\usepackage{color}
+\usepackage[reqno]{amsmath}
+\usepackage{amsthm}
+\usepackage{fancyvrb}
+\usepackage{amssymb,enumerate}
+\usepackage[all]{xy}
+\usepackage{endnotes}
+\usepackage{lscape}
+\newtheorem{com}{Comment}
+\usepackage{float}
+\usepackage{hyperref}
+\newtheorem{lem} {Lemma}
+\newtheorem{prop}{Proposition}
+\newtheorem{thm}{Theorem}
+\newtheorem{defn}{Definition}
+\newtheorem{cor}{Corollary}
+\newtheorem{obs}{Observation}
+\usepackage[compact]{titlesec}
+\usepackage{dcolumn}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usepackage{multirow}
+\usepackage{xcolor}
+\newcolumntype{.}{D{.}{.}{-1}}
+\newcolumntype{d}[1]{D{.}{.}{#1}}
+\definecolor{light-gray}{gray}{0.65}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{hyperref}
+\usepackage{xurl} 
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	basicstyle=\footnotesize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	numbers=left,                    
+	numbersep=5pt,                  
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=2
+}
+\lstset{style=mystyle}
+\newcommand{\Sref}[1]{Section~\ref{#1}}
+\newtheorem{hyp}{Hypothesis}
+
+\title{Problem Set 1}
+\date{Due: February 11, 2026}
+\author{Lisanne van Vucht}
+
+
+\begin{document}
+	\maketitle
+	\section*{Instructions}
+	\begin{itemize}
+		\item Please show your work! You may lose points by simply writing in the answer. If the problem requires you to execute commands in \texttt{R}, please include the code you used to get your answers. Please also include the \texttt{.R} file that contains your code. If you are not sure if work needs to be shown for a particular problem, please ask.
+		\item Your homework should be submitted electronically on GitHub in \texttt{.pdf} form.
+		\item This problem set is due before 23:59 on Wednesday February 11, 2026. No late assignments will be accepted.
+	\end{itemize}
+	
+	\vspace{.25cm}
+	\section*{Question 1} 
+	\vspace{.25cm}
+	\noindent The Kolmogorov-Smirnov test uses cumulative distribution statistics test the similarity of the empirical distribution of some observed data and a specified PDF, and serves as a goodness of fit test. The test statistic is created by:
+	
+	$$D = \max_{i=1:n} \Big\{ \frac{i}{n}  - F_{(i)}, F_{(i)} - \frac{i-1}{n} \Big\}$$
+	
+	\noindent where $F$ is the theoretical cumulative distribution of the distribution being tested and $F_{(i)}$ is the $i$th ordered value. Intuitively, the statistic takes the largest absolute difference between the two distribution functions across all $x$ values. Large values indicate dissimilarity and the rejection of the hypothesis that the empirical distribution matches the queried theoretical distribution. The p-value is calculated from the Kolmogorov-
+	Smirnoff CDF:
+	
+	$$p(D \leq d)= \frac{\sqrt {2\pi}}{d} \sum _{k=1}^{\infty }e^{-(2k-1)^{2}\pi ^{2}/(8d^{2})}$$
+	
+	
+	\noindent which generally requires approximation methods (see \href{https://core.ac.uk/download/pdf/25787785.pdf}{Marsaglia, Tsang, and Wang 2003}). This so-called non-parametric test (this label comes from the fact that the distribution of the test statistic does not depend on the distribution of the data being tested) performs poorly in small samples, but works well in a simulation environment. Write an \texttt{R} function that implements this test where the reference distribution is normal. Using \texttt{R} generate 1,000 Cauchy random variables (\texttt{rcauchy(1000, location = 0, scale = 1)}) and perform the test (remember, use the same seed, something like \texttt{set.seed(123)}, whenever you're generating your own data).\\
+	
+	
+	\noindent As a hint, you can create the empirical distribution and theoretical CDF using this code:
+	
+	\begin{lstlisting}[language=R]
+		# create empirical distribution of observed data
+		ECDF <- ecdf(data)
+		empiricalCDF <- ECDF(data)
+		# generate test statistic
+		D <- max(abs(empiricalCDF - pnorm(data))) \end{lstlisting}
+	
+	\vspace{3in}
+	
+\newpage
+
+\section{Answers 1}
+
+\subsection{Explanation of terms}
+
+\noindent The Kolmogorov-Smirnov (K-S) test is a "non-parametric test employed to check 
+whether the probability distributions of a sample and a control distribution, or two samples are equal. (Geeks for Geeks, 2025)" It is suitable as a goodness of fit test for contininious distributions (ibid). 
+
+In this PS, we want to compare our empirical (created) data set with a normal distibution. This means:\newline
+\newline \noindent H0: the data follows a normal distribution.  \newline 
+Ha: the data does not follow a normal distribution. \newline
+
+\subsection{Two options to calculate the CDF}
+I start by removing objects, installing and loading libraries, and setting my working directory.\newline
+\newline \tiny \begin{BVerbatim}
+	rm(list=ls())
+
+	detachAllPackages <- function() {
+		basic.packages <- c("package:stats", "package:graphics", "package:grDevices", "package:utils", "package:datasets", "package:methods", "package:base")
+		package.list <- search()[ifelse(unlist(gregexpr("package:", search()))==1, TRUE, FALSE)]
+		package.list <- setdiff(package.list, basic.packages)
+		if (length(package.list)>0)  for (package in package.list) detach(package,  character.only=TRUE)
+	}
+	detachAllPackages()
+	
+
+	pkgTest <- function(pkg){
+		new.pkg <- pkg[!(pkg %in% installed.packages()[,  "Package"])]
+		if (length(new.pkg)) 
+		install.packages(new.pkg,  dependencies = TRUE)
+		sapply(pkg,  require,  character.only = TRUE)
+	}
+
+	setwd("/Users/lisannevanvucht/Documents/TCD/Hillary Term/Quants II/Tutorials/WK II")
+\end{BVerbatim}
+\normalsize \newline
+
+\noindent Next, I generate the data following the instructions:\newline
+
+\begin{BVerbatim}
+	set.seed(123)
+	data<- rcauchy(1000, location = 0, scale = 1).
+\end{BVerbatim}
+\newline
+\noindent \newline When looking at the structure of the data, I see that the sample size is n = 1000. Therefore, moving on, with this data I create a function to manually compute a KS-test. I will compute a two sided test because we do not have an expectation regarding a direction. \newline
+\newline \noindent First, I calculate the test-statistic (D) by calclulating the maximum absolute difference between the pbserved and the expected cumaltive distibution functions(CDFs). In the code, I create the observed from the \textit{Cauchy} data. I then subtract the normal CDF (via pnorm) and take the largest absolute gap. This individual value, D, is the strongest deviation of the data from a normal distribution. \newline
+\newline \noindent Second, I calculate the P value using the second formula as provided on page 1. I've inserted this manually into R. First, I set \textit{sum\_term} to 0. I run a loop from k=1 to 1000 to match the sample size (instead of infinity as in the formula). In the loop I start with the calculation behind the sum, as this comes first. The line \texttt{term <- exp(exponent)} computes one single term of the series, and \texttt{sum\_term <- sum\_term + term} adds that term to the total. After the loop finishes, \textit{sum\_term} contains the sum of all 1000 observations. I then multiply this sum by the constant in front of the series to obtain the final p-value. This p-value tells us how extreme the observed D would be if the data were normally distributed. A small p-value indicates that such a deviation is unlikely under normality.\newline
+\newline \noindent To validate whether my answers are correct, I also use the R-function \textit{ks.test} to check the D and P value I obtained. The D value from the hand made function is  0.\textit{1354227} which almost matches the R-function's value of 0.13573. However, the p-value as provided by my manual input of the page-1 formula into R returns \textit{ 5.652523e-29}, which does not match the R-function's value of \textit{2.2e-16}. I tried various things, among other things: I replaced D, with the aforemnetioned value into the formula. I changed the pi value to 3.141593 because I wondered it might be due to malfunctioning of the pi function. I added and deleted various brackets, but nothing made a difference for the outcome to match the function's outcome. \newline
+ \newline Regardless, both of the p-value's assume that there is a very small probability we would see a deviation this large if the data was normally distributed. This would lead to a strong rejection of the null hypothesis that the created \textit{Cauchy} data is distributed normally and acceptence of the Ha. \newline 
+\begin{BVerbatim}
+
+ks_byhand <- function(data) {
+	ECDF <- ecdf(data)
+	empiricalCDF <- ECDF(data)
+	
+	D <- max(abs(empiricalCDF - pnorm(data)))
+
+	sum_term <- 0.0
+	for (k in 1:1000) {
+		exponent <- - (((2*k - 1)^2) * (pi^2)) / ((8 * D^2))
+		term <- exp(exponent)
+		sum_term <- sum_term + term
+	}
+	
+	p_value <- (sqrt(2*pi) / D) * sum_term
+	
+	return(list(
+	empiricalCDF = empiricalCDF,
+	D = D,
+	p_value = p_value
+	))
+}
+
+ks.test(data, "pnorm")
+
+\end{BVerbatim}
+	
+	\newpage
+	\section*{Question 2}
+	\noindent Estimate an OLS regression in \texttt{R} that uses the Newton-Raphson algorithm (specifically \texttt{BFGS}, which is a quasi-Newton method), and show that you get the equivalent results to using \texttt{lm}. Use the code below to create your data.
+	\vspace{.5cm}
+	\lstinputlisting[language=R, firstline=51,lastline=53]{PS01.R} 
+	
+	
+	\subsection{Answer 2}
+ \noindent I start by creating the example dataset. First, following the instructions, I set the seed with \textit{set.seed(123)} so I get the same random numbers. Then I continue with \texttt{runif(200, 1, 10)}, meaning I generate 200 random values between 1 and 10. After that I continue following the instructios \texttt{y} with \texttt{ex\_data\$y <- 0 + 2.75 * ex\_data\$x + rnorm(200, 0, 1.5)}. This means the true model has a slope of 2,75 if the intercept is 0.
+\newline	
+
+\noindent Next I create another hand made function called \texttt{ols\_manual}. In this I tell the function what the outcome is (\texttt{outcome}) the y values, what the input values are our \textit{x} (\texttt{input}), and what my guessed coefficients are (\texttt{parameter}). Inside the loop to creat e it, I first compute \texttt{n <- ncol(input)} to know how many columns I have in the input matrix. Then I take the first \texttt{n} values from \texttt{parameter} as my coefficients using \texttt{beta <- parameter[1:n]}. I do this because those are the coefficients that match the columns of my input matrix. After that I calculate predicted values with \texttt{y\_hat <- input \%*\% beta}, which is the matrix version of “intercept + slope $\times x$”. Finally, I compute the sum of squared residuals with \texttt{sum((outcome - y\_hat)\^2)}. This gives me the total squared errors for my current best gues for the coefficients. \newline
+\newline Then I use \texttt{optim()} to find the coefficients that make this sum of squared residuals as small as possible. I set \texttt{fn = ols\_manual} so \texttt{optim()} uses my ols\_manual function. I set \texttt{outcome = ex\_data\$y} and \texttt{input = cbind(1, ex\_data\$x)}. The \texttt{cbind(1, ex\_data\$x)} part creates the input matrix with a column of ones for the intercept and a column with \texttt{x} for the slope. I choose starting values with \texttt{par = c(1, 1)}, meaning I start with an intercept guess of 1 and a slope guess of 1. Next I set \texttt{method = "BFGS"} so the optimizer function uses the BFGS algorithm. Accordingly, Broyden, Fletcher, Goldfarb and Shanno (BFGS) provide useful quasi-Newton updating methods (Gill, 2001). \newline
+\newline After running \texttt{optim()}, I print the estimated intercept and slope with \texttt{round(results\_ols\$par, 2)}. In my output I get \texttt{0.14 2.73}, meaning my estimated intercept is 0.14 and my estimated slope is 2.73. \newline
+	\newline Finally, running the built-in OLS regression function with \texttt{lm(y \textasciitilde x, data = ex\_data)} and print the coefficients using \texttt{round(coef(lm(y\textasciitilde x, data=ex\_data)), 2)}. This returns \texttt{(Intercept) = 0.14} and \texttt{x = 2.73}, which matches my \texttt{optim()} result, so I do now get the same coefficients. This means that when $x = 0$, the predicted value of $y$ is 0.14. And on average a one unit increase in $x$ leads to a 2.73 increase in $y$. \newline
+	
+	\begin{BVerbatim}
+		et.seed(123)
+		ex_data <- data.frame(x = runif(200, 1, 10))
+		ex_data$y <- 0 + 2.75 * ex_data$x + rnorm(200, 0, 1.5)
+
+		
+		ols_manual <- function(outcome, input, parameter) {
+			
+			n <- ncol(input)
+			beta <- parameter[1:n]
+			
+			y_hat <- input %*% beta
+			
+			sum((outcome - y_hat)^2)
+		}
+		
+		results_ols <- optim(
+		fn      = ols_manual,
+		outcome = ex_data$y,
+		input   = cbind(1, ex_data$x),  # column of 1s = intercept
+		par     = c(1, 1),              # starting guess
+		method  = "BFGS",
+		)
+		
+		round(results_ols$par, 2)
+	
+		round(coef(lm(y~x, data=ex_data)), 2)
+		
+	\end{BVerbatim}
+	
+	\newpage
+	
+	
+	
+		
+	\begin{thebibliography}{9}
+		
+
+			\bibitem[CRAN(n.d.)]{insightLogLik}
+			CRAN. (n.d.).
+			\texttt{get\_loglikelihood} documentation.
+			\url{https://search.r-project.org/CRAN/refmans/insight/html/get_loglikelihood.html}
+			
+			\bibitem[GeeksforGeeks(2025)]{geeksforgeeksKS}
+			GeeksforGeeks. (2025).
+			Kolmogorov-Smirnov Test in R Programming.
+			\url{https://www.geeksforgeeks.org/r-language/kolmogorov-smirnov-test-in-r-programming/}
+			
+			\bibitem[Gill(2001)]{gill2001}
+			Gill, J. (2001).
+			\textit{Generalized Linear Models: A Unified Approach}.
+			SAGE Publications.
+			
+			\bibitem[Posit(2020)]{positSeed}
+			Posit Community Forum. (2020).
+			Discussion on \texttt{set.seed()}.
+			\url{https://forum.posit.co/t/set-seed-function/89599/4}
+			
+			\bibitem[Reddit(2021)]{redditLogLik}
+			Reddit AskStatistics. (2021).
+			Can someone explain log likelihood in an intuitive way?
+			\url{https://www.reddit.com/r/AskStatistics/comments/l14whl/can_someone_explain_log_likelihood_in_an/}
+			
+			\bibitem[R-lang.com(n.d.)]{rpi}
+			R-lang.com. (n.d.).
+			Pi in R.
+			\url{https://r-lang.com/pi-in-r/}
+			
+			\bibitem[Schlegel(n.d.)]{rpubsNewton}
+			Schlegel, A. (n.d.).
+			Newton-Raphson Method in R.
+			\url{https://rpubs.com/aaronsc32/newton-raphson-method}
+		
+	\end{thebibliography} 
+	
+	
+	
+	
+	
+	
+	
+\end{document}
