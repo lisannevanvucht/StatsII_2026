@@ -1,0 +1,303 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage{graphicx,textcomp}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{fullpage}
+\usepackage{color}
+\usepackage[reqno]{amsmath}
+\usepackage{amsthm}
+\usepackage{fancyvrb}
+\usepackage{amssymb,enumerate}
+\usepackage[all]{xy}
+\usepackage{endnotes}
+\usepackage{lscape}
+\newtheorem{com}{Comment}
+\usepackage{float}
+\usepackage{hyperref}
+\newtheorem{lem} {Lemma}
+\newtheorem{prop}{Proposition}
+\newtheorem{thm}{Theorem}
+\newtheorem{defn}{Definition}
+\newtheorem{cor}{Corollary}
+\newtheorem{obs}{Observation}
+\usepackage[compact]{titlesec}
+\usepackage{dcolumn}
+\usepackage{tikz}
+\usetikzlibrary{arrows}
+\usepackage{multirow}
+\usepackage{xcolor}
+\newcolumntype{.}{D{.}{.}{-1}}
+\newcolumntype{d}[1]{D{.}{.}{#1}}
+\definecolor{light-gray}{gray}{0.65}
+\usepackage{url}
+\usepackage{listings}
+\usepackage{color}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+	backgroundcolor=\color{backcolour},   
+	commentstyle=\color{codegreen},
+	keywordstyle=\color{magenta},
+	numberstyle=\tiny\color{codegray},
+	stringstyle=\color{codepurple},
+	basicstyle=\footnotesize,
+	breakatwhitespace=false,         
+	breaklines=true,                 
+	captionpos=b,                    
+	keepspaces=true,                 
+	numbers=left,                    
+	numbersep=5pt,                  
+	showspaces=false,                
+	showstringspaces=false,
+	showtabs=false,                  
+	tabsize=2
+}
+\lstset{style=mystyle}
+\newcommand{\Sref}[1]{Section~\ref{#1}}
+\newtheorem{hyp}{Hypothesis}
+
+\title{Problem Set 4}
+\date{Due: April 10, 2026}
+\author{Lisanne van Vucht}
+
+
+\begin{document}
+	\maketitle
+	\section*{Instructions}
+	\begin{itemize}
+		\item Please show your work! You may lose points by simply writing in the answer. If the problem requires you to execute commands in \texttt{R}, please include the code you used to get your answers. Please also include the \texttt{.R} file that contains your code. If you are not sure if work needs to be shown for a particular problem, please ask.
+		\item Your homework should be submitted electronically on GitHub in \texttt{.pdf} form.
+		\item This problem set is due before 23:59 on Friday April 10, 2026. No late assignments will be accepted.
+		
+	\end{itemize}
+	
+	\vspace{.25cm}
+	\section*{Question 1}
+	\vspace{.25cm}
+	\noindent We're interested in modeling the historical causes of child mortality. We have data from 26855 children born in Skellefteå, Sweden from 1850 to 1884. Using the "child" dataset in the \texttt{eha} library, fit a Cox Proportional Hazard model using mother's age and infant's gender as covariates. Present and interpret the output.
+	
+	
+	
+	\section*{Question 2}
+	\vspace{.25cm}
+	\noindent We want to estimate how the amount of damage caused by a disaster relates to (1) whether disaster relief is provided and (2) the amount of relief that is provided  conditional on a donation occurring when a disaster hits a given country. Estimate a Heckman selection model using the \texttt{disasters\_response} data on \href{https://raw.githubusercontent.com/ASDS-TCD/StatsII_2026/refs/heads/main/datasets/disaster_response.csv}{GitHub} in which \texttt{binContribution} is the outcome for the selection equation, and \texttt{originalContributionMillionUSDLogged} is the outcome for the second equation. Use \texttt{occurrences  + deathsEM + normalizedDamageEMLogged} as your input variables for both equations. Present and interpret the output.
+	
+	\section{Answer 1}
+	
+	\subsection{Setup and running the model}
+	
+	\noindent I load the data and check its structure. I then create a survival object using \texttt{Surv()}, where \texttt{enter} is the age at which a child enters the risk set (always 0, i.e. birth), \texttt{exit} is the age at which it leaves the risk set (death or censored at age 15), and \texttt{event} indicates whether a death occurred (1) or the observation is censored (0). I then fit the Cox PH model and assess model fit using \texttt{drop1()}, which tests what happens to the AIC when each covariate is removed.\newline
+	
+	\tiny \begin{BVerbatim}
+		data("child")
+		
+		# i check the structure
+		str(child)
+		
+		# I create an object for survival. enter is the age when a child enters the risk group
+		# this is always 0 and 'exit' is the age when it leaves that group (dead or aged 15)
+		# event tells us whether it was (1) dead or censored (0)
+		child_survival <- with(child, Surv(enter, exit, event))
+		child_cox <- coxph(child_survival ~ m.age + sex, data = child)
+		summary(child_cox)
+		
+		# model fit: test what happens if you drop one of the variables?
+		# we see that the AIC increases to 113022 if we drop age and 113018 if we drop sex
+		# so both help
+		drop1(child_cox, test = "Chisq")
+		
+		# create nice table
+		stargazer(child_cox)
+	\end{BVerbatim}
+	\normalsize \newline
+	
+	\subsection{Output and interpretation}
+	
+	\noindent Running \texttt{summary(child\_cox)} and \texttt{stargazer(child\_cox)} produces the following output:\newline
+	
+	\tiny \begin{BVerbatim}
+		Call:
+		coxph(formula = child_survival ~ m.age + sex, data = child)
+		
+		n= 26574, number of events= 5616
+		
+		coef exp(coef)  se(coef)      z Pr(>|z|)
+		m.age      0.007617  1.007646  0.002128  3.580 0.000344 ***
+		sexfemale -0.082215  0.921074  0.026743 -3.074 0.002110 **
+		
+		exp(coef) exp(-coef) lower .95 upper .95
+		m.age        1.0076     0.9924     1.003    1.0119
+		sexfemale    0.9211     1.0857     0.874    0.9706
+		
+		Concordance= 0.519  (se = 0.004)
+		Likelihood ratio test= 22.52  on 2 df,   p=1e-05
+		Wald test            = 22.52  on 2 df,   p=1e-05
+		Score (logrank) test = 22.53  on 2 df,   p=1e-05
+	\end{BVerbatim}
+	
+	\normalsize
+	
+	\begin{table}[!htbp] \centering 
+		\caption{} 
+		\label{} 
+		\begin{tabular}{@{\extracolsep{5pt}}lc} 
+			\\[-1.8ex]\hline 
+			\hline \\[-1.8ex] 
+			& \multicolumn{1}{c}{\textit{Dependent variable:}} \\ 
+			\cline{2-2} 
+			\\[-1.8ex] & child\_survival \\ 
+			\hline \\[-1.8ex] 
+			m.age & 0.008$^{***}$ \\ 
+			& (0.002) \\ 
+			& \\ 
+			sexfemale & $-$0.082$^{***}$ \\ 
+			& (0.027) \\ 
+			& \\ 
+			\hline \\[-1.8ex] 
+			Observations & 26,574 \\ 
+			R$^{2}$ & 0.001 \\ 
+			Max. Possible R$^{2}$ & 0.986 \\ 
+			Log Likelihood & $-$56,503.480 \\ 
+			Wald Test & 22.520$^{***}$ (df = 2) \\ 
+			LR Test & 22.518$^{***}$ (df = 2) \\ 
+			Score (Logrank) Test & 22.530$^{***}$ (df = 2) \\ 
+			\hline 
+			\hline \\[-1.8ex] 
+			\textit{Note:}  & \multicolumn{1}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+		\end{tabular} 
+	\end{table} 
+	
+	\newpage
+	
+	\noindent We have around 26,574 children in the dataset of which 5,616 died and approximately 21,000 were censored at age 15. I interpret the results in terms of hazard ratios, computed as $\exp(\hat{\beta})$, with \textit{male} as the reference category for sex.\newline
+	
+
+\noindent \textbf{Mother's age (\texttt{m.age}):} On average, a one-year increase in mother's age is associated with a 0.0076 increase in the expected log of the hazard of child mortality, keeping all other predictors (in this case only sex) constant. Taking the exponential of the coefficient we find a hazard ratio of 1.008. This means that every year that a mother gets older, the hazard of child mortality increases by 0.76\%. This is a small but highly significant effect.\newline
+
+\noindent \textbf{Infant sex (\texttt{sexfemale}):} The estimated coefficient is $\hat{\beta} = -0.082$ and the hazard ratio is $\exp(-0.082) = 0.921$, in which \textit{male} is the reference category. So on average, being female is associated with a 0.082 decrease in the expected log of the hazard of child mortality, holding all other predictors (in this case only mother's age) constant This means that for every 100 deaths among male infants, approximately 92 female infants die. This is an 8\% lower chance of dying before the age of 15, keeping all other predictors (in this case only mother's age) constant. The effect is statistically significant \newline
+
+\noindent \textbf{Model fit check:} Using \texttt{drop1()}, I check what happens if we would remove one of our predictors to assess their strength. I see that removing \texttt{m.age} raises the AIC from 113,011 to 113,022, and removing \texttt{sex} raises it to 113,018. This means that both help model fit.  
+
+\section{Answer 2}
+
+\subsection{Setup and running the model}
+
+\noindent I load the data and check its structure. I then check the distribution of \texttt{originalContributionMillionUSDLogged} separately for \texttt{binContribution = 0} and \texttt{binContribution = 1}, because I want to know if $-25.33$ is really  value or a placeholder . The results show that for \texttt{binContribution = 0}, the logged contribution is always exactly $-25.33$ and this is not a true value but a placeholder for ``no donation''. On the contrary, for \texttt{binContribution = 1}, values range between $-9$ and $6.5$. I then recode the placeholder to \texttt{NA} because the Heckman model only predicts outcomes when the donation variable holds 1 and not 0. Simply put, I do not want R to think $-25.33$ is an observed value. This will mess up the model's predictions.\newline
+
+\tiny \begin{BVerbatim}
+	disaster_data <- read.csv("https://raw.githubusercontent.com/ASDS-TCD/StatsII_2026/refs/heads/main/datasets/disaster_response.csv")
+	
+	str(disaster_data)
+	
+	tapply(
+	disaster_data$originalContributionMillionUSDLogged,
+	disaster_data$binContribution,
+	summary
+	)
+	
+	disaster_cleaned <- disaster_data[, c(
+	"binContribution",
+	"originalContributionMillionUSDLogged",
+	"occurrences", "deathsEM", "normalizedDamageEMLogged"
+	)]
+	
+	disaster_cleaned$originalContributionMillionUSDLogged[
+	disaster_cleaned$binContribution == 0
+	] <- NA
+	
+	disaster_cleaned$binContribution <- factor(disaster_cleaned$binContribution, levels = c(0, 1))
+	
+	# selection = was there a donation (binary)
+	# outcome = models how much donated but only if bincontribution = 1
+	# method = maximum likelihood
+	disaster_model <- selection(
+	selection = binContribution ~ occurrences + deathsEM + normalizedDamageEMLogged,
+	outcome   = originalContributionMillionUSDLogged ~ occurrences + deathsEM + normalizedDamageEMLogged,
+	data      = disaster_cleaned,
+	method    = "ml"
+	)
+	summary(disaster_model)
+	
+	stargazer(disaster_model)
+\end{BVerbatim}
+\normalsize \newline
+
+\subsection{Output and interpretation}
+
+\noindent Running \texttt{summary(disaster\_model)} and \texttt{stargazer(disaster\_model)} produces the following output. We have 49,096 observations of which 45,848 are censored (no donation) and 3,248 are observed (donation occurred).\newline
+
+\begin{table}[!htbp] \centering 
+	\caption{} 
+	\label{} 
+	\begin{tabular}{@{\extracolsep{5pt}}lc} 
+		\\[-1.8ex]\hline 
+		\hline \\[-1.8ex] 
+		& \multicolumn{1}{c}{\textit{Dependent variable:}} \\ 
+		\cline{2-2} 
+		\\[-1.8ex] & originalContributionMillionUSDLogged \\ 
+		\hline \\[-1.8ex] 
+		occurrences & $-$0.002 \\ 
+		& (0.006) \\ 
+		& \\ 
+		deathsEM & 0.006$^{***}$ \\ 
+		& (0.002) \\ 
+		& \\ 
+		normalizedDamageEMLogged & $-$0.018$^{***}$ \\ 
+		& (0.005) \\ 
+		& \\ 
+		Constant & 0.413 \\ 
+		& (0.407) \\ 
+		& \\ 
+		\hline \\[-1.8ex] 
+		Observations & 49,096 \\ 
+		Log Likelihood & $-$17,557.780 \\ 
+		$\rho$ & $-$0.527$^{***}$  (0.091) \\ 
+		\hline 
+		\hline \\[-1.8ex] 
+		\textit{Note:}  & \multicolumn{1}{r}{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01} \\ 
+	\end{tabular} 
+\end{table} 
+
+\tiny
+
+\begin{BVerbatim}
+	Tobit 2 model (sample selection model)
+	Maximum Likelihood estimation
+	Newton-Raphson maximisation, 16 iterations
+	Return code 8: successive function values within relative tolerance limit (reltol)
+	Log-Likelihood: -17557.78 
+	49096 observations (45848 censored and 3248 observed)
+	10 free parameters (df = 49086)
+	Probit selection equation:
+	Estimate Std. Error t value Pr(>|t|)    
+	(Intercept)              -1.3039428  0.0180255  -72.34   <2e-16 ***
+	occurrences               0.0192811  0.0016553   11.65   <2e-16 ***
+	deathsEM                  0.0118603  0.0007308   16.23   <2e-16 ***
+	normalizedDamageEMLogged  0.0210385  0.0009035   23.29   <2e-16 ***
+	Outcome equation:
+	Estimate Std. Error t value Pr(>|t|)    
+	(Intercept)               0.413489   0.407490   1.015 0.310243    
+	occurrences              -0.001849   0.006353  -0.291 0.770989    
+	deathsEM                  0.005801   0.002031   2.856 0.004294 ** 
+	normalizedDamageEMLogged -0.018056   0.005234  -3.450 0.000561 ***
+	Error terms:
+	Estimate Std. Error t value Pr(>|t|)    
+	sigma  1.93599    0.10384  18.645  < 2e-16 ***
+	rho   -0.52668    0.09104  -5.785 7.29e-09 ***
+	---
+	Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+\end{BVerbatim}
+\normalsize \newline
+
+\noindent \textbf{Selection equation:} This tells us what predicts whether relief is provided at all. All three predictors are positive (see R console output above) and significant. Simply put this means that more occurrences, more deaths, and more damage all increase the likelihood that relief will be provided. All of these show a statistically significant effect,\newline
+
+\noindent \textbf{Outcome equation:} This tells us how much relief is provided, conditional on a donation being made. Here, occurrences has no significant effect ($p = 0.771$). Deaths has a small positive effect ($p = 0.004$), meaning higher death tolls are associated with slightly larger contributions. Damage has a negative and significant effect ($p < 0.001$). Interestingly, this implies that greater damage is actually associated with lower contribution amounts once a donation has been made.\newline
+
+
+\newpage
+
+\end{document}
